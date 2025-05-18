@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from Sumarize.models import Resumo
+from models import Resumo
 from typing import List
 
 app = FastAPI()
