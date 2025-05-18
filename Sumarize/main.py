@@ -1,22 +1,19 @@
 from fastapi import FastAPI, HTTPException
 from typing import List
 from pydantic import BaseModel, validator
-from models import Resumo
+from models import Resumo, TextoEntrada
 
 app = FastAPI()
 
 resumos: List[Resumo] = []
 
-class TextoEntrada(BaseModel):
-    texto: str
-
-    @validator("texto")
-    def validar_markdown(cls, value):
-        if not value.strip():
-            raise ValueError("O texto não pode estar vazio.")
-        if not any(md in value for md in ["#", "*", "-", "[", "]", "(", ")"]):
-            raise ValueError("O texto deve conter pelo menos um elemento de Markdown.")
-        return value
+@validator("texto")
+def validar_markdown(cls, value):
+    if not value.strip():
+        raise ValueError("O texto não pode estar vazio.")
+    if not any(md in value for md in ["#", "*", "-", "[", "]", "(", ")"]):
+        raise ValueError("O texto deve conter pelo menos um elemento de Markdown.")
+    return value
 
 @app.post("/resumir/", response_model=Resumo)
 def create_resumo(resumo: TextoEntrada):
