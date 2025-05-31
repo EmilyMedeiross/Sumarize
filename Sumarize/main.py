@@ -1,54 +1,72 @@
 import re
 from fastapi import FastAPI, HTTPException
 from typing import List
-from pydantic import BaseModel
-from models import Resumo, TextoEntrada
+from models import Resumo, TextoEntrada, PalavrasChave
 
 app = FastAPI()
 
 resumos: List[Resumo] = []
 
-def markdown_para_texto_simples(markdown: str) -> str:
-    """Remove marcações Markdown e retorna texto simples."""
+IGNORE_WORDS = {"o", "a", "os", "as", "um", "uma", "uns", "umas", 
+             "de", "do", "da", "dos", "das", "em", "no", "na", 
+        "nos", "nas", "por", "para", "com", "sem", "que", "e", "é"}
+
+
+def markdown_para_texto(markdown: str) -> str:
     texto = markdown
 
-    # Remover títulos (#)
     texto = re.sub(r'#+\s?', '', texto)
-    # Remover negrito e itálico
+
     texto = re.sub(r'(\*\*|__)(.*?)\1', r'\2', texto)
     texto = re.sub(r'(\*|_)(.*?)\1', r'\2', texto)
-    # Remover listas
+
     texto = re.sub(r'^[-*+]\s+', '', texto, flags=re.MULTILINE)
-    # Remover links [texto](url)
+ 
     texto = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', texto)
-    # Remover outras marcações
+  
     texto = re.sub(r'[`>]', '', texto)
 
     return texto.strip()
 
 def gerar_resumo(texto: str) -> str:
-    # Remove marcações básicas de Markdown
+
     texto = re.sub(r'[#*_`\-]+', '', texto)
 
-    # Substitui quebras de linha por espaço simples
     texto = texto.replace('\n', ' ').strip()
 
-    # Separa o texto em frases com base em pontuação final
     frases = re.split(r'(?<=[.!?])\s+', texto)
 
-    # Junta até 3 frases para formar o resumo
     resumo = ' '.join(frases[:3])
     return resumo
 
+def palavras_chave_texto(texto: str) -> List[str]:
+    if not texto or not isinstance(texto, str):
+        return []
+    
+    texto_limpo = re.sub(r'[^\w\s]', '', texto.lower())
+    palavras = texto_limpo.split()
 
+    contador = {}
+    for palavra in palavras:
+        if palavra not in IGNORE_WORDS:
+            contador[palavra] = contador.get(palavra, 0) + 1
+
+    palavras_ordenadas = []
+    for palavra, freq in contador.items(): 
+        palavras_ordenadas.append((freq, palavra))
+    
+    palavras_ordenadas.sort(reverse=True)
+
+    palavras_chave = [palavra for freq, palavra in palavras_ordenadas[:5]] 
+    return [palavra.capitalize() for palavra in palavras_chave]
 
 @app.post("/resumir/", response_model=Resumo)
-def create_resumo(entrada: TextoEntrada):
+def criar_resumo(entrada: TextoEntrada):
     if not entrada.texto.strip():
         raise HTTPException(status_code=400, detail="Erro: o texto de entrada está vazio.")
 
     markdown_texto = entrada.texto
-    texto_simples = markdown_para_texto_simples(markdown_texto)
+    texto_simples = markdown_para_texto(markdown_texto)
 
     if not texto_simples:
         raise HTTPException(status_code=400, detail="Erro: formato de entrada inválido.")
@@ -64,5 +82,18 @@ def create_resumo(entrada: TextoEntrada):
 
 @app.get("/resumos/", response_model=List[Resumo])
 def listar_resumos():
-    """Retorna a lista de resumos gerados."""
     return resumos
+
+@app.post("/palavras-chaves/", response_model=PalavrasChave)
+def palavras_chave(entrada: TextoEntrada):
+    if not entrada.texto.strip():
+        raise HTTPException(status_code=400, detail="Erro: texto inválido para extração de palavras-chave.")
+    
+    texto_simples = markdown_para_texto(entrada.texto)
+    palavras = palavras_chave_texto(texto_simples)
+    
+    if not palavras:
+        raise HTTPException(status_code=400, detail="Erro: não foi possível extrair palavras-chave do texto.")
+    
+    return PalavrasChave(palavras=palavras)
+

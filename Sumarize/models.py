@@ -1,10 +1,14 @@
 from pydantic import BaseModel, validator 
+from typing import List
 
 class Resumo(BaseModel):
     texto: str
     
 class TextoEntrada(BaseModel):
     texto: str
+
+class PalavrasChave(BaseModel):
+    palavras:List[str]
 
 @validator('texto')
 def validar_markdown(cls, value):
