@@ -15,28 +15,29 @@ IGNORE_WORDS = {"o", "a", "os", "as", "um", "uma", "uns", "umas",
 def markdown_para_texto(markdown: str) -> str:
     texto = markdown
 
-    texto = re.sub(r'#+\s?', '', texto)
+    texto = re.sub(r'#+\s?', '', texto)  # Remove headings
 
-    texto = re.sub(r'(\*\*|__)(.*?)\1', r'\2', texto)
-    texto = re.sub(r'(\*|_)(.*?)\1', r'\2', texto)
+    texto = re.sub(r'(\*\*|__)(.*?)\1', r'\2', texto)  # Remove negrito
 
-    texto = re.sub(r'^[-*+]\s+', '', texto, flags=re.MULTILINE)
+    texto = re.sub(r'(\*|_)(.*?)\1', r'\2', texto)   # Remove itálico
+
+    texto = re.sub(r'^[-*+]\s+', '', texto, flags=re.MULTILINE)  # Remove marcadores de lista 
  
-    texto = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', texto)
+    texto = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', texto)     # Remove links Markdown
   
-    texto = re.sub(r'[`>]', '', texto)
+    texto = re.sub(r'[`>]', '', texto)    # Remove blocos de código
 
-    return texto.strip()
+    return texto.strip()     # Remove espaços extras no início/fim
 
 def gerar_resumo(texto: str) -> str:
 
-    texto = re.sub(r'[#*_`\-]+', '', texto)
+    texto = re.sub(r'[#*_`\-]+', '', texto)   # Remove resquício de sintaxe Markdown
 
-    texto = texto.replace('\n', ' ').strip()
+    texto = texto.replace('\n', ' ').strip()     # Normaliza espaços 
 
-    frases = re.split(r'(?<=[.!?])\s+', texto)
+    frases = re.split(r'(?<=[.!?])\s+', texto)   # Divide o texto em frases
 
-    resumo = ' '.join(frases[:3])
+    resumo = ' '.join(frases[:3])   # Pega as primeiras 3 frases e junta com espaços
     return resumo
 
 def palavras_chave_texto(texto: str) -> List[str]:
