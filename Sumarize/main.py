@@ -2,6 +2,7 @@ import re
 from fastapi import FastAPI, HTTPException
 from typing import List
 from models import Resumo, TextoEntrada, PalavrasChave
+from fastapi.responses import Response  
 
 app = FastAPI()
 
@@ -60,6 +61,50 @@ def palavras_chave_texto(texto: str) -> List[str]:
 
     palavras_chave = [palavra for freq, palavra in palavras_ordenadas[:5]] 
     return [palavra.capitalize() for palavra in palavras_chave]
+
+#função para formatar resposta em XML
+def formatar_resposta_xml(resumo: str, palavras_chave: List[str]) -> str:
+    resumo_xml = f"<resumo>{resumo}</resumo>" if resumo else "<resumo />"
+    
+    palavras_xml = ""
+    if palavras_chave:
+        for palavra in palavras_chave:
+            palavras_xml += f"<palavra>{palavra}</palavra>"
+        palavras_chave_xml = f"<palavras-chave>{palavras_xml}</palavras-chave>"
+    else:
+        palavras_chave_xml = "<palavras-chave />"
+    
+    return f"<resposta>{resumo_xml}{palavras_chave_xml}</resposta>"
+
+#endpoint para resposta integrada em XML
+@app.post("/processar/", response_class=Response)
+def processar_texto(entrada: TextoEntrada):
+    try:
+        if not entrada.texto.strip():
+            raise HTTPException(status_code=400, detail="Erro: o texto de entrada está vazio.")
+        
+        texto_simples = markdown_para_texto(entrada.texto)
+        
+        if not texto_simples:
+            raise HTTPException(status_code=400, detail="Erro: formato de entrada inválido.")
+        
+        if len(texto_simples) > 3000:
+            raise HTTPException(status_code=400, detail="Texto muito longo, reduza para 3000 caracteres.")
+        
+        resumo_gerado = gerar_resumo(texto_simples)
+        palavras = palavras_chave_texto(texto_simples)
+        
+        xml_resposta = formatar_resposta_xml(resumo_gerado, palavras)
+        return Response(content=xml_resposta, media_type="application/xml")
+    
+    except HTTPException as e:
+        return Response(content=f"<erro>{e.detail}</erro>", 
+                        media_type="application/xml",
+                        status_code=e.status_code)
+    except Exception:
+        return Response(content="<erro>Erro interno no servidor.</erro>",
+                        media_type="application/xml",
+                        status_code=500)
 
 @app.post("/resumir/", response_model=Resumo)
 def criar_resumo(entrada: TextoEntrada):
