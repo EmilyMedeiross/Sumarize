@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from typing import List
 from models import Resumo, TextoEntrada, PalavrasChave
 from fastapi.responses import Response  
+from fastapi.exceptions import RequestValidationError
 
 app = FastAPI()
 
@@ -14,21 +15,29 @@ IGNORE_WORDS = {"o", "a", "os", "as", "um", "uma", "uns", "umas",
 
 
 def markdown_para_texto(markdown: str) -> str:
+    if not markdown:
+        return ""
+    
+    # Remove apenas se existir, senão retorna o texto original
+    removals = [
+        (r'#+\s?', ''),                   # Headings
+        (r'(\*\*|__)(.*?)\1', r'\2'),      # Bold
+        (r'(\*|_)(.*?)\1', r'\2'),         # Italic
+        (r'^[-*+]\s+', '', re.MULTILINE),  # List markers
+        (r'\[(.*?)\]\(.*?\)', r'\1'),      # Links
+        (r'[`>]', '')                      # Code blocks
+    ]
+    
     texto = markdown
+    for pattern, replacement in removals:
+        flags = pattern[2] if len(pattern) > 2 else 0
+        if isinstance(pattern, tuple) and len(pattern) > 2:
+            texto = re.sub(pattern[0], replacement, texto, flags=pattern[2])
+        else:
+            texto = re.sub(pattern, replacement, texto)
+    
+    return texto.strip()
 
-    texto = re.sub(r'#+\s?', '', texto)  # Remove headings
-
-    texto = re.sub(r'(\*\*|__)(.*?)\1', r'\2', texto)  # Remove negrito
-
-    texto = re.sub(r'(\*|_)(.*?)\1', r'\2', texto)   # Remove itálico
-
-    texto = re.sub(r'^[-*+]\s+', '', texto, flags=re.MULTILINE)  # Remove marcadores de lista 
- 
-    texto = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', texto)     # Remove links Markdown
-  
-    texto = re.sub(r'[`>]', '', texto)    # Remove blocos de código
-
-    return texto.strip()     # Remove espaços extras no início/fim
 
 def gerar_resumo(texto: str) -> str:
 
@@ -40,6 +49,7 @@ def gerar_resumo(texto: str) -> str:
 
     resumo = ' '.join(frases[:3])   # Pega as primeiras 3 frases e junta com espaços
     return resumo
+
 
 def palavras_chave_texto(texto: str) -> List[str]:
     if not texto or not isinstance(texto, str):
@@ -62,6 +72,8 @@ def palavras_chave_texto(texto: str) -> List[str]:
     palavras_chave = [palavra for freq, palavra in palavras_ordenadas[:5]] 
     return [palavra.capitalize() for palavra in palavras_chave]
 
+
+
 #função para formatar resposta em XML
 def formatar_resposta_xml(resumo: str, palavras_chave: List[str]) -> str:
     resumo_xml = f"<resumo>{resumo}</resumo>" if resumo else "<resumo />"
@@ -75,6 +87,7 @@ def formatar_resposta_xml(resumo: str, palavras_chave: List[str]) -> str:
         palavras_chave_xml = "<palavras-chave />"
     
     return f"<resposta>{resumo_xml}{palavras_chave_xml}</resposta>"
+
 
 #endpoint para resposta integrada em XML
 @app.post("/processar/", response_class=Response)
@@ -105,6 +118,8 @@ def processar_texto(entrada: TextoEntrada):
         return Response(content="<erro>Erro interno no servidor.</erro>",
                         media_type="application/xml",
                         status_code=500)
+
+
 
 @app.post("/resumir/", response_model=Resumo)
 def criar_resumo(entrada: TextoEntrada):
@@ -143,3 +158,12 @@ def palavras_chave(entrada: TextoEntrada):
     
     return PalavrasChave(palavras=palavras)
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    errors = exc.errors()
+    error_msgs = [f"{err['msg']} ({'.'.join(map(str, err['loc']))})" for err in errors]
+    return Response(
+        content=f"<erro>{'; '.join(error_msgs)}</erro>",
+        media_type="application/xml",
+        status_code=422)
