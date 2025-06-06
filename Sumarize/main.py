@@ -166,4 +166,5 @@ async def validation_exception_handler(request, exc):
     return Response(
         content=f"<erro>{'; '.join(error_msgs)}</erro>",
         media_type="application/xml",
-        status_code=422)
+        status_code=422
+    )
