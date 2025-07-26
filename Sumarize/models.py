@@ -25,7 +25,6 @@ class Resumo(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     texto: str
-
     palavras_chave: List[PalavraChave] = Relationship(back_populates="resumos", link_model=ResumoPalavra)
 
 #Não é uma tabela no banco, só serve pra entrada de dados. É um auxiliar pra receber texto de entrada na API 
