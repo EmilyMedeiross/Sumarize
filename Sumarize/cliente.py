@@ -1,4 +1,5 @@
 import requests
+#lembrar de instalar "pip install requests"
 
 BASE_URL = "http://localhost:8000"
 
@@ -174,6 +175,6 @@ def main():
             break
         else:
             print("\n Opção inválida! Tente novamente.")
-
+            
 if __name__ == "__main__":
     main()
