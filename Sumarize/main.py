@@ -6,6 +6,7 @@ from fastapi.responses import Response, PlainTextResponse
 from fastapi.exceptions import RequestValidationError
 from sqlmodel import SQLModel, Session, select, create_engine
 from contextlib import asynccontextmanager
+from fastapi.encoders import jsonable_encoder
 
 url = "sqlite:///sumarize.db"
 args = {"check_same_thread": False }
@@ -134,7 +135,7 @@ def criar_resumo(entrada: TextoEntrada, session: SessionDep):
     session.add(novo_resumo)
     session.commit()
     session.refresh(novo_resumo)
-    salvar_palavras_chave(session, novo_resumo.id, palavras)
+
     return novo_resumo
 
 @app.get("/resumos/", response_model=List[Resumo])
@@ -185,6 +186,9 @@ def atualizar_resumo(resumo_id: int, entrada: TextoEntrada, session: SessionDep)
 
     palavras = palavras_chave_texto(texto_simples)
     salvar_palavras_chave(session, resumo_id, palavras)
+
+    print("Resumo atualizado:", resumo)
+    print("Texto do resumo:", resumo.texto)
     return resumo
 
 @app.delete("/resumos/{resumo_id}")

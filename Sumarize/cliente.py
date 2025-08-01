@@ -20,13 +20,13 @@ def criar_resumo():
         
         if response.status_code == 200:
             resumo = response.json()
-            print(f"\n✅ Resumo criado com sucesso! (ID: {resumo['id']})")
-            print(f"📝 Resumo: {resumo['texto']}")
+            print(f"Resumo criado com sucesso! (ID: {resumo['id']})")
+            print(f"Resumo: {resumo['texto']}")
         else:
             print(f"Erro {response.status_code}: {response.text}")
     
     except Exception as e:
-        print(f"Falha na comunicação com a API: {str(e)}")
+       print(f"Falha na comunicação com a API: {str(e)}")
 
 def listar_resumos():
     """Lista todos os resumos cadastrados na API"""
@@ -47,6 +47,9 @@ def listar_resumos():
             print(f"Erro {response.status_code}: {response.text}")
     
     except Exception as e:
+        print(f"Falha na comunicação com a API: {str(e)}")
+
+
         print(f"Falha na comunicação com a API: {str(e)}")
 
 def atualizar_resumo():
@@ -151,7 +154,7 @@ def mostrar_menu():
     print("5. Extrair palavras-chave")
     print("6. Processar texto (XML)")
     print("0. Sair")
-    return input("Escolha uma opção: ")
+    return input("\nEscolha uma opção: ")
 
 def main():
     """Função principal que controla o fluxo do programa"""
